@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
         await container.aclose()
 
 
-app = FastAPI(title="Свои Правила API", version="0.5.0", lifespan=lifespan)
+app = FastAPI(title="Свои Правила API", version="0.6.0", lifespan=lifespan)
 app.include_router(assist_router)
 app.include_router(miniapp_router)
 app.include_router(telegram_router)
@@ -49,7 +49,7 @@ app.include_router(telegram_router)
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "version": "0.5.0"}
+    return {"status": "ok", "version": "0.6.0"}
 
 
 def resolve_miniapp_static_dir() -> str:

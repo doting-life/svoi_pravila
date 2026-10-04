@@ -1,6 +1,6 @@
 {
   "name": "@svoi-pravila/miniapp-client",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Typed fetch client for the Svoi Pravila Telegram Mini App API (/v1/miniapp).",
   "private": true,
   "type": "module",

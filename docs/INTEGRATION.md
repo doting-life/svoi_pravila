@@ -1,4 +1,4 @@
-# Integration Guide — Mini App API v0.5
+# Integration Guide — Mini App API v0.6
 
 How to build a client (Telegram Mini App, another frontend, a script or a
 service-to-service integration test) against the Svoi Pravila Mini App API.
@@ -151,7 +151,7 @@ The Mini App frontend (`frontend/src/api/`) is a thin adapter over this package.
   in the full OpenAPI document, but it is an internal API and is not exposed by
   the public Mini App TypeScript client.
 - Version metadata (`info.version` in OpenAPI, `/health`, `API_VERSION` in
-  the TS client) is `0.5.0`.
+  the TS client) is `0.6.0`.
 - Additive response fields are non-breaking; clients must ignore unknown
   response fields. Removing or renaming fields, or tightening request
   validation, is breaking and requires regenerating the contract and client.

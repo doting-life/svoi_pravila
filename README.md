@@ -1,4 +1,4 @@
-# Свои Правила Backend v0.5
+# Свои Правила Backend v0.6
 
 Deterministic agentic backend for the three MVP workflows:
 

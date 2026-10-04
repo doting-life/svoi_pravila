@@ -36,7 +36,7 @@ uvicorn app.main:app --port 8000
 
 These are already the defaults. Setting them explicitly overrides a local
 `.env` that points at real services. Check: `curl http://localhost:8000/health`
-returns `{"status":"ok","version":"0.5.0"}`.
+returns `{"status":"ok","version":"0.6.0"}`.
 
 ## 3. Call the API
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "svoi-pravila-backend"
-version = "0.5.0"
+version = "0.6.0"
 description = "Deterministic workflow engine for the Svoi Pravila AI communication product"
 requires-python = ">=3.11"
 dependencies = [

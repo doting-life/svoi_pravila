@@ -1,4 +1,4 @@
-# Telegram Mini App API — v0.5
+# Telegram Mini App API — v0.6
 
 The machine-readable contract is [`docs/openapi.json`](openapi.json) / [`docs/openapi.yaml`](openapi.yaml), with sample payloads in [`docs/fixtures/`](fixtures/). For client integration (TypeScript client, examples, error handling) see [INTEGRATION.md](INTEGRATION.md); for a local run see [QUICKSTART.md](QUICKSTART.md).
 

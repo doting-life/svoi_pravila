@@ -25,7 +25,7 @@ export type WorkflowName = Schemas["WorkflowName"];
 export type { components, operations, paths } from "./generated/openapi";
 
 /** Must equal `info.version` in docs/openapi.json (asserted by the test suite). */
-export const API_VERSION = "0.5.0";
+export const API_VERSION = "0.6.0";
 
 /** Runtime list of WorkflowName values (asserted against the OpenAPI enum by the test suite). */
 export const workflowNameValues = ["soften", "decode", "help-say"] as const satisfies readonly WorkflowName[];
