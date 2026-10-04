@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.api.errors import register_provider_error_handlers
 from app.api.http import router as assist_router
 from app.api.miniapp import router as miniapp_router
 from app.api.telegram import router as telegram_router
@@ -42,6 +43,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Свои Правила API", version="0.6.0", lifespan=lifespan)
+register_provider_error_handlers(app)
 app.include_router(assist_router)
 app.include_router(miniapp_router)
 app.include_router(telegram_router)

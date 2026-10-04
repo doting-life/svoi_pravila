@@ -4,6 +4,21 @@ from app.stages.base import BaseStage, StageContext
 from app.workflows.state import WorkflowState
 
 
+VALIDATION_FAILURE_TEXT = {
+    "ru": "Не удалось получить корректный ответ.",
+    "en": "Could not produce a valid response.",
+    "he": "לא הצלחנו להפיק תשובה תקינה.",
+}
+
+
+def validation_failure_text(language: str | None) -> str:
+    """Deterministic fallback text; variants (en-US, ru_RU) use the base language, unknown -> English."""
+    base = (language or "").strip().lower().replace("_", "-").split("-")[0]
+    if base == "iw":  # legacy Hebrew code
+        base = "he"
+    return VALIDATION_FAILURE_TEXT.get(base, VALIDATION_FAILURE_TEXT["en"])
+
+
 class DeliveryStage(BaseStage):
     async def execute(self, state: WorkflowState, manifest: StageManifest, context: StageContext) -> DeliveryResponse:
         validation = state.artifacts["validation_result"]
@@ -13,7 +28,7 @@ class DeliveryStage(BaseStage):
                 request_id=state.request_id,
                 workflow=WorkflowName(state.workflow),
                 status="error",
-                text="Не удалось получить корректный ответ.",
+                text=validation_failure_text(context.api_request.language),
             )
 
         if "soften_result" in state.artifacts:

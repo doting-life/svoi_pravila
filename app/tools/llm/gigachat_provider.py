@@ -12,6 +12,7 @@ from app.tools.llm.base import (
     StructuredGenerationResponse,
     StructuredLLMProvider,
 )
+from app.tools.llm.errors import LLMRateLimitError, LLMTimeoutError, LLMUnavailableError, safe_retry_after
 from app.tools.llm.schema import output_json_schema, parse_structured_json, user_input
 
 DEFAULT_GIGACHAT_BASE_URL = "https://api.giga.chat/v1"
@@ -120,6 +121,14 @@ class GigaChatStructuredLLMProvider(StructuredLLMProvider):
             # Token revoked or expired early: refresh once and retry.
             self._invalidate_token()
             response = await self._post_chat(body)
+        if response.status_code == 429:
+            raise LLMRateLimitError(
+                "GigaChat rate limit (HTTP 429)",
+                provider="gigachat",
+                retry_after=safe_retry_after(response.headers.get("Retry-After")),
+            )
+        if response.status_code >= 500:
+            raise LLMUnavailableError(f"GigaChat unavailable (HTTP {response.status_code})", provider="gigachat")
         if response.status_code != 200:
             raise RuntimeError(f"GigaChat chat completion failed with HTTP {response.status_code}")
 
@@ -148,6 +157,8 @@ class GigaChatStructuredLLMProvider(StructuredLLMProvider):
                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
                 json=body,
             )
+        except httpx.TimeoutException as exc:
+            raise LLMTimeoutError(f"GigaChat request timed out: {type(exc).__name__}", provider="gigachat") from exc
         except httpx.HTTPError as exc:
             raise RuntimeError(f"GigaChat request failed: {type(exc).__name__}") from exc
 

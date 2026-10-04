@@ -9,6 +9,7 @@ from app.artifacts import ARTIFACT_MODELS
 from app.artifacts.internal import SelfCheck, envelope_for
 from app.tools.base import BaseTool, ToolResult
 from app.tools.llm.base import StructuredGenerationRequest, StructuredLLMProvider
+from app.tools.llm.errors import LLMProviderError
 
 SelfCheckMode = Literal["observe", "required"]
 
@@ -80,5 +81,8 @@ class LLMGenerateTool(BaseTool):
             tool_metadata["self_check"] = check
             tool_metadata["self_check_status"] = status
             return ToolResult(success=True, data=validated, metadata=tool_metadata)
+        except LLMProviderError:
+            # Typed upstream failures propagate so the API can map them (429/503/504).
+            raise
         except Exception as exc:
             return ToolResult(success=False, error=str(exc))
