@@ -18,6 +18,10 @@ class GenerationStage(BaseStage):
             for name, artifact in state.require(manifest.requires).items()
         }
 
+        retry_instructions = state.metadata.get("retry_instructions")
+        if retry_instructions:
+            user_payload["retry_instructions"] = list(retry_instructions)
+
         tool = context.tools.get("llm_generate")
         result = await tool.execute(
             system_instructions=system_instructions,
@@ -32,5 +36,6 @@ class GenerationStage(BaseStage):
         )
         if not result.success:
             raise RuntimeError(result.error or "LLM generation failed")
+        state.metadata.pop("retry_instructions", None)
         state.metadata["llm"] = result.metadata or {}
         return result.data

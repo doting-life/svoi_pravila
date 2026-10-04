@@ -172,10 +172,10 @@ GIGACHAT_SCOPE=GIGACHAT_API_PERS
 GIGACHAT_BASE_URL=https://api.giga.chat/v1
 GIGACHAT_AUTH_URL=https://ngw.devices.sberbank.ru:9443/api/v2/oauth
 GIGACHAT_TIMEOUT_SECONDS=30
-GIGACHAT_CA_BUNDLE=
+GIGACHAT_CA_BUNDLE=/app/certs/russian_trusted_root_ca_pem.crt
 ```
 
-Required: `GIGACHAT_CREDENTIALS` (the authorization key, not an access token; the app obtains and caches access tokens itself) and `GIGACHAT_MODEL`. Use `GIGACHAT_API_B2B` or `GIGACHAT_API_CORP` as scope if your account requires it. `GIGACHAT_CA_BUNDLE` is an optional path **inside the container**: put the certificate in the repository (do not commit it), rebuild, and use e.g. `/app/certs/russian_trusted_root_ca.pem`.
+Required: `GIGACHAT_CREDENTIALS` (the authorization key, not an access token; the app obtains and caches access tokens itself) and `GIGACHAT_MODEL`. Use `GIGACHAT_API_B2B` or `GIGACHAT_API_CORP` as scope if your account requires it. `GIGACHAT_CA_BUNDLE` is **required in Docker**: both GigaChat hosts (`ngw.devices.sberbank.ru`, `api.giga.chat`) use certificates issued by the Russian Trusted Root CA, which is not in the default Python/Debian trust store. Without it the app fails with `GigaChat auth request failed: ConnectError` (`CERTIFICATE_VERIFY_FAILED`). The public CA certificate is committed at `certs/russian_trusted_root_ca_pem.crt` (official source: https://www.gosuslugi.ru/crt, SHA-256 fingerprint `D2:6D:2D:02:31:B7:C3:9F:92:CC:73:85:12:BA:54:10:35:19:E4:40:5D:68:B5:BD:70:3E:97:88:CA:8E:CF:31`) and is copied into the image at `/app/certs/`. TLS verification stays enabled.
 
 ```powershell
 docker compose up -d --force-recreate app
@@ -268,6 +268,8 @@ https://your-domain.example/miniapp/
 **redis unhealthy**: `docker compose logs redis`. Usually a port conflict or a corrupt AOF file (the destructive reset fixes it).
 
 **app exits on startup**: `docker compose logs app`. Look for a settings `ValidationError` (bad `.env` value) or `Failed to preload workflow skill`. Also check `docker compose logs db-init`; if it failed, `app` will not start.
+
+**GigaChat `auth failed with HTTP 400`** (`Can't decode 'Authorization' header`): `GIGACHAT_CREDENTIALS` must be the **Authorization key** shown in the Sber developer portal (a long Base64 string, about 100 characters, encoding `client_id:client_secret`), not the Client ID or Client Secret alone. Paste it without quotes and without the `Basic ` prefix.
 
 **Missing LLM credentials**: the log names the missing variable. Fill it in `.env` or switch to `LLM_PROVIDER=fake`, then `docker compose up -d --force-recreate app`.
 

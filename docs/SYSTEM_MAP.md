@@ -96,7 +96,7 @@ sequenceDiagram
 | Manifests | `config/workflows/*.yaml` | Stage order, retry | Implemented |
 | `ReceiveStage`, `ContextStage`, `PlanningStage`, `GenerationStage`, `DeliveryStage` | `app/stages/` | Pipeline steps | Implemented |
 | `SafetyStage` | `app/stages/safety.py` | Fixed constraints, never blocks | **Placeholder (partial)** |
-| `ValidationStage` | `app/stages/validation.py` | Non-empty checks only | **Placeholder (partial)** |
+| `ValidationStage` | `app/stages/validation.py` | Non-empty checks + soften avoided-phrase check | **Placeholder (partial)** |
 | Skills | `app/skills/loader.py`, `config/skills/`, `skills/` | Prompt bundles | Implemented |
 | LLM providers | `app/tools/llm/` | OpenAI / fake | Implemented / fake is dev-only |
 | Repositories | `app/repositories/` | Users, relationships, rules | Implemented (memory + Postgres) |

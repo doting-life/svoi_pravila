@@ -255,7 +255,7 @@ You usually don't need these first: `app/persistence/`, `migrations/`, `app/chec
 These are **partial implementations**, not finished features:
 
 - **`SafetyStage` (`app/stages/safety.py`) — partial, deterministic placeholder.** It adds fixed constraints for `decode` and returns `allow` / `allow_with_constraints`. It **never returns `block`**, so the engine's blocked path is currently unreachable. It is **not** a safety or moderation system.
-- **`ValidationStage` (`app/stages/validation.py`) — partial.** Only checks that key fields are non-empty. `schema_valid` and `language_valid` are hard-coded `True`. It is **not** complete validation. Actual schema enforcement comes from `LLMGenerateTool` Pydantic validation and `validate_artifact`.
+- **`ValidationStage` (`app/stages/validation.py`) — partial.** Checks that key fields are non-empty and, for `soften`, that the rewrite does not contain phrases quoted in `avoid` relationship rules (`avoided_phrases_absent`, deterministic, `app/stages/constraints.py`; a violation triggers the declared `generate` retry). `schema_valid` and `language_valid` are hard-coded `True`. It is **not** complete validation. Actual schema enforcement comes from `LLMGenerateTool` Pydantic validation and `validate_artifact`.
 - **`FakeStructuredLLMProvider`** — dev/test only.
 - **In-memory demo data** — `build_container` seeds user `u-1` with default relationship `partner-1` (`InMemoryRelationshipRepository.demo()`) in memory mode.
 

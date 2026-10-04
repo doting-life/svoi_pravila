@@ -137,6 +137,7 @@ class WorkflowEngine:
                     retry_attempts = state.stage_attempts.get(retry.retry_stage, 0)
                     if retry_attempts < retry.max_attempts:
                         retry_index = self._stage_index(manifest, retry.retry_stage)
+                        state.metadata["retry_instructions"] = list(getattr(artifact, "retry_instructions", []))
                         self._discard_from(state, manifest, retry_index)
                         index = retry_index
                         continue

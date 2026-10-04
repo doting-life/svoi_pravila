@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.artifacts import DecodeResult, HelpSayResult, SoftenResult
+from app.artifacts import DecodeResult, HelpSayResult, RelationshipContext, SoftenResult
+from app.stages.constraints import find_avoided_phrases
 from app.tools.llm.base import (
     StructuredGenerationRequest,
     StructuredGenerationResponse,
@@ -30,7 +31,7 @@ class FakeStructuredLLMProvider(StructuredLLMProvider):
                 "original_intent": source,
                 "rewritten_message": rewritten,
                 "tone_applied": "calm_direct",
-                "constraints_respected": ["preserve_meaning", "reduce_hostility"],
+                "constraints_respected": self._respected_constraints(request.user_payload, source, rewritten),
             }
         elif output_model is DecodeResult:
             payload = {
@@ -65,6 +66,22 @@ class FakeStructuredLLMProvider(StructuredLLMProvider):
             output_tokens=max(len(str(payload)) // 4, 1),
             cost_usd=0.0,
         )
+
+    @staticmethod
+    def _respected_constraints(user_payload: dict[str, Any], source: str, rewritten: str) -> list[str]:
+        """Report only applicable plan constraints: avoid-rules whose phrase was present and was removed."""
+        plan_constraints = (user_payload.get("generation_plan") or {}).get("constraints") or []
+        context_payload = user_payload.get("relationship_context")
+        if not context_payload:
+            return []
+        context = RelationshipContext.model_validate(context_payload)
+        return [
+            rule.value
+            for rule in context.rules
+            if rule.value in plan_constraints
+            and find_avoided_phrases(source, [rule])
+            and not find_avoided_phrases(rewritten, [rule])
+        ]
 
     @staticmethod
     def _soften(text: str) -> str:
