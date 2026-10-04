@@ -19,6 +19,8 @@ class AppSettings(BaseSettings):
     app_port: int = 8000
 
     llm_provider: Literal["fake", "openai", "gigachat", "deepseek"] = "fake"
+    # observe: only for initial real-provider verification; production: required.
+    llm_self_check_mode: Literal["observe", "required"] = "required"
     openai_api_key: SecretStr | None = None
     openai_model: str | None = None
     openai_timeout_seconds: float = 30.0

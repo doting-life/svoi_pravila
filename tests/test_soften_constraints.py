@@ -13,6 +13,7 @@ from app.tools.llm import FakeStructuredLLMProvider, LLMGenerateTool
 from app.tools.llm.base import StructuredGenerationRequest, StructuredGenerationResponse, StructuredLLMProvider
 from app.tools.registry import ToolRegistry
 from app.workflows.engine import WorkflowDependencies, WorkflowEngine
+from tests.envelope import wrap
 
 AVOID_RULE = "\u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u044c \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u0447\u043d\u044b\u0435 '\u0442\u044b \u0432\u0441\u0435\u0433\u0434\u0430' \u0438 '\u0442\u044b \u043d\u0438\u043a\u043e\u0433\u0434\u0430'"
 TONE_RULE = "\u0433\u043e\u0432\u043e\u0440\u0438\u0442\u044c \u043f\u0440\u044f\u043c\u043e \u0438 \u0435\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043d\u043d\u043e, \u0431\u0435\u0437 \u0442\u0435\u0440\u0430\u043f\u0435\u0432\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0445 \u0448\u0442\u0430\u043c\u043f\u043e\u0432"
@@ -34,14 +35,17 @@ class RecordingProvider(StructuredLLMProvider):
         constraints: list[str] = request.user_payload["generation_plan"]["constraints"]
         respected = [c for c in constraints if c in (AVOID_RULE, TONE_RULE)]
         return StructuredGenerationResponse(
-            payload={
-                "version": "1.0",
-                "request_id": request.user_payload["message_request"]["request_id"],
-                "original_intent": "intent",
-                "rewritten_message": rewritten,
-                "tone_applied": "direct",
-                "constraints_respected": respected,
-            },
+            payload=wrap(
+                request,
+                {
+                    "version": "1.0",
+                    "request_id": request.user_payload["message_request"]["request_id"],
+                    "original_intent": "intent",
+                    "rewritten_message": rewritten,
+                    "tone_applied": "direct",
+                    "constraints_respected": respected,
+                },
+            ),
             provider="recording",
             model="test",
         )
@@ -246,14 +250,17 @@ class CorrectingProvider(StructuredLLMProvider):
         self.calls += 1
         corrected = bool(request.user_payload.get("retry_instructions"))
         return StructuredGenerationResponse(
-            payload={
-                "version": "1.0",
-                "request_id": request.user_payload["message_request"]["request_id"],
-                "original_intent": "intent",
-                "rewritten_message": GOOD if corrected else BAD,
-                "tone_applied": "direct",
-                "constraints_respected": [AVOID_RULE] if corrected else [],
-            },
+            payload=wrap(
+                request,
+                {
+                    "version": "1.0",
+                    "request_id": request.user_payload["message_request"]["request_id"],
+                    "original_intent": "intent",
+                    "rewritten_message": GOOD if corrected else BAD,
+                    "tone_applied": "direct",
+                    "constraints_respected": [AVOID_RULE] if corrected else [],
+                },
+            ),
             provider="correcting",
             model="test",
         )
@@ -384,7 +391,7 @@ async def test_later_generation_cannot_receive_stale_instructions() -> None:
 
     tools = ToolRegistry()
     tools.register(LLMGenerateTool(provider))
-    context = SimpleNamespace(skill_loader=SkillLoader(), tools=tools)
+    context = SimpleNamespace(skill_loader=SkillLoader(), tools=tools, workflow_manifest=load_workflow_manifest("soften"))
     generate = next(s for s in load_workflow_manifest("soften").stages if s.name == "generate")
     stage = GenerationStage()
 

@@ -35,9 +35,15 @@ async def test_all_workflows_run_end_to_end(workflow: WorkflowName) -> None:
         "generate",
         "validate",
         "deliver",
+        "request",
     ]
     assert all("text" not in event.metadata for event in events)
     assert all("raw_prompt" not in event.metadata for event in events)
+    by_stage = {event.stage: event for event in events}
+    assert "provider_latency_ms" in by_stage["generate"].metadata
+    assert "generation_ms" in by_stage["generate"].metadata
+    assert "validation_ms" in by_stage["validate"].metadata
+    assert by_stage["request"].latency_ms is not None
 
 
 @pytest.mark.asyncio

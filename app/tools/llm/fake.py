@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.artifacts import DecodeResult, HelpSayResult, RelationshipContext, SoftenResult
+from app.artifacts.internal import GenerationEnvelope
 from app.stages.constraints import find_avoided_phrases
 from app.tools.llm.base import (
     StructuredGenerationRequest,
@@ -22,6 +23,9 @@ class FakeStructuredLLMProvider(StructuredLLMProvider):
         source = str(request.user_payload["message_request"]["text"])
         request_id = request.user_payload["message_request"]["request_id"]
         output_model = request.output_model
+        envelope = isinstance(output_model, type) and issubclass(output_model, GenerationEnvelope)
+        if envelope:
+            output_model = output_model.model_fields["result"].annotation
 
         if output_model is SoftenResult:
             rewritten = self._soften(source)
@@ -58,6 +62,9 @@ class FakeStructuredLLMProvider(StructuredLLMProvider):
         else:
             raise ValueError(f"Unsupported fake output model: {output_model.__name__}")
 
+        if envelope:
+            payload = {"result": payload, "self_check": {"all_passed": True, "failures": [], "violated_rule_ids": []}}
+
         return StructuredGenerationResponse(
             payload=payload,
             provider="fake",
@@ -74,6 +81,13 @@ class FakeStructuredLLMProvider(StructuredLLMProvider):
         context_payload = user_payload.get("relationship_context")
         if not context_payload:
             return []
+        context_payload = {
+            **context_payload,
+            "rules": [
+                {key: value for key, value in rule.items() if key != "rule_id"}
+                for rule in context_payload.get("rules", [])
+            ],
+        }
         context = RelationshipContext.model_validate(context_payload)
         return [
             rule.value

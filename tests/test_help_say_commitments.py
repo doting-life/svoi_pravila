@@ -13,6 +13,7 @@ from app.tools.llm import FakeStructuredLLMProvider, LLMGenerateTool
 from app.tools.llm.base import StructuredGenerationRequest, StructuredGenerationResponse, StructuredLLMProvider
 from app.tools.registry import ToolRegistry
 from app.workflows.engine import WorkflowDependencies, WorkflowEngine
+from tests.envelope import wrap
 
 SOURCE = (
     "Хочу сказать жене, что меня раздражает, когда мои сообщения остаются без ответа, "
@@ -34,14 +35,17 @@ class HelpSayProvider(StructuredLLMProvider):
         self.requests.append(request)
         message = self.messages[min(len(self.requests), len(self.messages)) - 1]
         return StructuredGenerationResponse(
-            payload={
-                "version": "1.0",
-                "request_id": request.user_payload["message_request"]["request_id"],
-                "message": message,
-                "tone": "calm",
-                "preserved_intent": "intent",
-                "warnings": [],
-            },
+            payload=wrap(
+                request,
+                {
+                    "version": "1.0",
+                    "request_id": request.user_payload["message_request"]["request_id"],
+                    "message": message,
+                    "tone": "calm",
+                    "preserved_intent": "intent",
+                    "warnings": [],
+                },
+            ),
             provider="help-say-test",
             model="test",
         )

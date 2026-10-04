@@ -114,7 +114,7 @@ def build_container(settings: AppSettings | None = None) -> ApplicationContainer
     provider, provider_closer = build_llm_provider(settings)
     if provider_closer is not None:
         closers.append(provider_closer)
-    tools.register(LLMGenerateTool(provider))
+    tools.register(LLMGenerateTool(provider, self_check_mode=settings.llm_self_check_mode))
 
     redis: Redis | None = None
     if settings.checkpoint_backend == "redis":

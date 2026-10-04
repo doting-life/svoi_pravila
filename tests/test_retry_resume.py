@@ -12,6 +12,7 @@ from app.tools.llm import LLMGenerateTool
 from app.tools.llm.base import StructuredGenerationRequest, StructuredGenerationResponse, StructuredLLMProvider
 from app.tools.registry import ToolRegistry
 from app.workflows.engine import WorkflowDependencies, WorkflowEngine
+from tests.envelope import wrap
 
 
 class RetryOnceProvider(StructuredLLMProvider):
@@ -24,14 +25,17 @@ class RetryOnceProvider(StructuredLLMProvider):
         request_id = request.user_payload["message_request"]["request_id"]
         rewritten = " " if self.calls == 1 else "Мне важно, чтобы это было сделано."
         return StructuredGenerationResponse(
-            payload={
-                "version": "1.0",
-                "request_id": request_id,
-                "original_intent": source,
-                "rewritten_message": rewritten,
-                "tone_applied": "calm_direct",
-                "constraints_respected": [],
-            },
+            payload=wrap(
+                request,
+                {
+                    "version": "1.0",
+                    "request_id": request_id,
+                    "original_intent": source,
+                    "rewritten_message": rewritten,
+                    "tone_applied": "calm_direct",
+                    "constraints_respected": [],
+                },
+            ),
             provider="retry-once",
             model="test",
         )
@@ -48,14 +52,14 @@ class FailOnceProvider(StructuredLLMProvider):
         source = request.user_payload["message_request"]["text"]
         request_id = request.user_payload["message_request"]["request_id"]
         return StructuredGenerationResponse(
-            payload={
+            payload=wrap(request, {
                 "version": "1.0",
                 "request_id": request_id,
                 "original_intent": source,
                 "rewritten_message": "Мне важно, чтобы это было сделано.",
                 "tone_applied": "calm_direct",
                 "constraints_respected": [],
-            },
+            }),
             provider="fail-once",
             model="test",
         )

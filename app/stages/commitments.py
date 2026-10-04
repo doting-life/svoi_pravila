@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+# FROZEN TEMPORARY REGRESSION GUARD (Russian variants only: ru, ru-RU, ...).
+# The primary, language-agnostic mechanism is the model self-check code
+# "invented_commitments" (app/stages/self_check.py). Do not add patterns or
+# languages here. Removal: once real-provider/shadow evaluation shows the
+# self-check catches the known regression corpus, switch to log-only, then delete.
+
 import re
 
 # High-confidence commitment/proposal patterns for the help-say workflow.

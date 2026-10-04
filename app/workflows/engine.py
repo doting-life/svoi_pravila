@@ -82,6 +82,35 @@ class WorkflowEngine:
             trace=self.dependencies.trace,
         )
 
+        request_started = time.monotonic()
+        terminal_status = "failed"
+        error_type: str | None = None
+        try:
+            result = await self._run_stages(manifest, api_request, state, context, start_index)
+            terminal_status = result.status
+            return result
+        except Exception as exc:
+            error_type = type(exc).__name__
+            raise
+        finally:
+            # Exactly one terminal event per execution; tracing must never mask the original outcome.
+            generate_attempts = state.stage_attempts.get("generate", 0)
+            metadata: dict[str, Any] = {"generate_attempts": generate_attempts}
+            if error_type is not None:
+                metadata["error_type"] = error_type
+            try:
+                await self._trace(state, "request", terminal_status, generate_attempts, request_started, metadata)
+            except Exception:
+                pass
+
+    async def _run_stages(
+        self,
+        manifest: WorkflowManifest,
+        api_request: AssistRequest,
+        state: WorkflowState,
+        context: StageContext,
+        start_index: int,
+    ) -> DeliveryResponse:
         index = start_index
         while index < len(manifest.stages):
             stage_manifest = manifest.stages[index]
@@ -114,7 +143,7 @@ class WorkflowEngine:
                 "completed",
                 attempt,
                 started,
-                state.metadata.get("llm", {}) if stage_manifest.name == "generate" else {},
+                self._stage_trace_metadata(state, stage_manifest.name),
             )
 
             if stage_manifest.name == "safety" and isinstance(artifact, SafetyDecision) and artifact.status == "block":
@@ -191,6 +220,15 @@ class WorkflowEngine:
                 metadata=metadata,
             )
         )
+
+    @staticmethod
+    def _stage_trace_metadata(state: WorkflowState, stage: str) -> dict[str, Any]:
+        """Privacy-safe metadata: IDs, codes, flags, counts and latencies only."""
+        if stage == "generate":
+            return dict(state.metadata.get("llm", {}))
+        if stage == "validate":
+            return dict(state.metadata.get("validation", {}))
+        return {}
 
     @staticmethod
     def _stage_index(manifest: WorkflowManifest, name: str) -> int:

@@ -30,7 +30,13 @@ function getTelegramWebApp(): TelegramWebApp | null {
 }
 
 export function initTelegram(): void {
-  sdk.init?.();
+  try {
+    sdk.init?.();
+  } catch (error) {
+    // Expected outside Telegram (e.g. LaunchParamsRetrieveError in a normal browser):
+    // keep rendering so the UI can show its "open from Telegram" state.
+    console.warn("Telegram SDK not initialized:", error instanceof Error ? error.name : error);
+  }
   const webApp = getTelegramWebApp();
   webApp?.ready?.();
   webApp?.expand?.();
