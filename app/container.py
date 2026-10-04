@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.checkpoints import CheckpointStore, InMemoryCheckpointStore, RedisCheckpointStore
 from app.integrations.telegram import TelegramBotClient
-from app.observability import RequestTraceSink
+from app.observability import RequestTraceSink, TraceSink
+from app.observability.postgres_sink import PostgresTraceSink
 from app.persistence import build_async_engine, build_session_factory
 from app.repositories import (
     InMemoryRelationshipRepository,
@@ -89,7 +90,7 @@ def build_llm_provider(settings: AppSettings) -> tuple[StructuredLLMProvider, As
 @dataclass(slots=True)
 class ApplicationContainer:
     engine: WorkflowEngine
-    trace: RequestTraceSink
+    trace: TraceSink
     checkpoints: CheckpointStore
     relationships: RelationshipRepository
     users: UserRepository
@@ -132,12 +133,16 @@ def build_container(settings: AppSettings | None = None) -> ApplicationContainer
         checkpoints = InMemoryCheckpointStore()
 
     database_engine: AsyncEngine | None = None
+    trace: TraceSink = RequestTraceSink()
     if settings.relationship_backend == "postgres":
         database_engine = build_async_engine(settings.database_url or "")
         sessions = build_session_factory(database_engine)
         relationships: RelationshipRepository = PostgresRelationshipRepository(sessions)
         users: UserRepository = PostgresUserRepository(sessions)
         closers.append(database_engine.dispose)
+        postgres_trace = PostgresTraceSink(sessions)
+        closers.append(postgres_trace.drain)
+        trace = postgres_trace
     else:
         relationships = InMemoryRelationshipRepository.demo()
         memory_users = InMemoryUserRepository()
@@ -157,7 +162,6 @@ def build_container(settings: AppSettings | None = None) -> ApplicationContainer
         telegram = TelegramBotClient(settings.telegram_bot_token.get_secret_value())  # type: ignore[union-attr]
         closers.append(telegram.aclose)
 
-    trace = RequestTraceSink()
     engine = WorkflowEngine(
         WorkflowDependencies(
             skills=skills,

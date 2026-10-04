@@ -181,6 +181,19 @@ See [docs/MINIAPP_API.md](docs/MINIAPP_API.md) and [docs/INTEGRATION.md](docs/IN
 - Mini App identity is derived only from cryptographically validated Telegram `initData`.
 - Relationship access is scoped by internal `user_id`.
 
+## Observability
+
+In PostgreSQL mode, privacy-safe request/stage telemetry is persisted to the append-only
+`service_events` table (created by `scripts/init_db.py`). DAU, request frequency, error
+rates, latency percentiles, token usage and LLM cost can be exported with:
+
+```bash
+python scripts/export_metrics.py --from 2026-10-01 --to 2026-10-31 --kind summary --format json
+python scripts/export_metrics.py --from 2026-10-01 --to 2026-10-31 --kind events --format csv --out events.csv
+```
+
+See [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md).
+
 ## Tests
 
 ```bash

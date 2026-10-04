@@ -1,3 +1,3 @@
-from app.observability.trace import RequestTraceSink, TraceEvent
+from app.observability.trace import RequestTraceSink, TraceEvent, TraceSink
 
-__all__ = ["RequestTraceSink", "TraceEvent"]
+__all__ = ["RequestTraceSink", "TraceEvent", "TraceSink"]

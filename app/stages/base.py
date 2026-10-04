@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from app.artifacts import Artifact, AssistRequest, WorkflowName
 from app.config import StageManifest, WorkflowManifest
-from app.observability import RequestTraceSink
+from app.observability import TraceSink
 from app.repositories import RelationshipRepository, UserRepository
 from app.skills import SkillLoader
 from app.tools.registry import ToolRegistry
@@ -21,7 +21,7 @@ class StageContext:
     tools: ToolRegistry
     relationships: RelationshipRepository
     users: UserRepository
-    trace: RequestTraceSink
+    trace: TraceSink
 
 
 class BaseStage(ABC):

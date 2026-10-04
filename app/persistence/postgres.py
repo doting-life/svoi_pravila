@@ -3,7 +3,23 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from decimal import Decimal
+from uuid import UUID
+
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -75,6 +91,41 @@ class RelationshipRuleModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     relationship: Mapped[RelationshipModel] = relationship(back_populates="rules")
+
+
+class ServiceEventModel(Base):
+    """Append-only, privacy-safe service telemetry. No message, prompt, output or rule text columns."""
+
+    __tablename__ = "service_events"
+    __table_args__ = (
+        Index("ix_service_events_at_stage", "at", "stage"),
+        Index("ix_service_events_request_id", "request_id"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    request_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    relationship_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    workflow: Mapped[str] = mapped_column(String(32), nullable=False)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
+    provider_latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generation_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    validation_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generate_attempts: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ruleset_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    self_check_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    error_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 def build_async_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:

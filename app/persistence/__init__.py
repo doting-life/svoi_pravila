@@ -2,6 +2,7 @@ from app.persistence.postgres import (
     Base,
     RelationshipModel,
     RelationshipRuleModel,
+    ServiceEventModel,
     UserModel,
     build_async_engine,
     build_session_factory,

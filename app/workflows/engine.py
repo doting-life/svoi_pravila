@@ -15,7 +15,7 @@ from app.artifacts import (
 )
 from app.checkpoints import CheckpointSnapshot, CheckpointStore
 from app.config import WorkflowManifest, load_workflow_manifest
-from app.observability import RequestTraceSink, TraceEvent
+from app.observability import TraceEvent, TraceSink
 from app.repositories import InMemoryUserRepository, RelationshipRepository, UserRepository
 from app.skills import SkillLoader
 from app.stages import StageContext, StageRegistry
@@ -29,7 +29,7 @@ class WorkflowDependencies:
     tools: ToolRegistry
     relationships: RelationshipRepository
     checkpoints: CheckpointStore
-    trace: RequestTraceSink
+    trace: TraceSink
     stages: StageRegistry
     users: UserRepository = field(default_factory=InMemoryUserRepository)
 
@@ -83,6 +83,7 @@ class WorkflowEngine:
         )
 
         request_started = time.monotonic()
+        state.metadata.setdefault("user_id", api_request.user_id)
         terminal_status = "failed"
         error_type: str | None = None
         try:
@@ -209,6 +210,7 @@ class WorkflowEngine:
         metadata: dict[str, Any],
     ) -> None:
         latency_ms = int((time.monotonic() - started) * 1000)
+        user_id = state.metadata.get("user_id")
         await self.dependencies.trace.record(
             TraceEvent(
                 request_id=state.request_id,
@@ -218,6 +220,7 @@ class WorkflowEngine:
                 attempt=attempt,
                 latency_ms=latency_ms,
                 metadata=metadata,
+                user_id=user_id if isinstance(user_id, str) else None,
             )
         )
 
