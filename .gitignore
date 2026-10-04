@@ -19,3 +19,8 @@ htmlcov/
 
 frontend/node_modules/
 frontend/dist/
+*-start.txt
+*-end.txt
+stop.flag
+stress-stats.csv
+smoke.json
