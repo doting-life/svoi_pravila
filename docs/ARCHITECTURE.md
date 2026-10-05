@@ -151,6 +151,7 @@ sequenceDiagram
 | GigaChat | `gigachat_provider.py` | REST v1; cached OAuth token; timeout 30 s default |
 | OpenAI | `openai_provider.py` | Responses API with structured outputs; 2 SDK retries |
 | DeepSeek | `deepseek_provider.py` | JSON-schema text format; timeout 60 s |
+| Sber500 gateway | `sber500_provider.py` | OpenAI-compatible `/chat/completions`, strict `json_schema`; Bearer key; timeout 30 s; no retries |
 | Fake | `fake.py` | Deterministic; used for tests and platform load tests |
 
 - **`GenerationEnvelope`** (`app/artifacts/internal.py`) is the *internal* response shape: `{ result, self_check }`. `LLMGenerateTool` (`app/tools/llm/tool.py`) splits it. `result` becomes the public `SoftenResult`/`DecodeResult`/`HelpSayResult`. `self_check` goes to workflow metadata and is classified as `present`, `missing` or `malformed`.
@@ -288,7 +289,7 @@ Scaling path (*future improvement*): run multiple uvicorn workers or app replica
 - **Telegram initData HMAC-SHA256 validation** (`app/integrations/telegram/miniapp_auth.py`): the secret is derived from the bot token, and `auth_date` freshness is enforced (`TELEGRAM_INIT_DATA_MAX_AGE_SECONDS`, default 3600). initData is re-validated on every Mini App request.
 - **Ownership checks**: the user identity comes from initData only. Relationships and rules are always looked up by owner.
 - **Telemetry stores no raw messages**: only allow-listed technical fields go into `service_events`.
-- **Secrets** (`TELEGRAM_BOT_TOKEN`, `GIGACHAT_CREDENTIALS`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `TELEGRAM_WEBHOOK_SECRET`) live in `.env`, which is git-ignored. Only `.env.example` with placeholders is committed.
+`DEEPSEEK_API_KEY`, `SBER500_API_KEY`, `TELEGRAM_WEBHOOK_SECRET`
 - **Relationship rules are untrusted user data.** They are placed into the prompt as constraints, and system/skill instructions take precedence. Rules cannot change the stage order, the output schema or the validation logic.
 
 More detail: [SECURITY_PRIVACY.md](SECURITY_PRIVACY.md).

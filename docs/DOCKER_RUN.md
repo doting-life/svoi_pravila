@@ -198,6 +198,25 @@ Required: `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`.
 docker compose up -d --force-recreate app
 ```
 
+## SWITCH TO SBER500 GATEWAY
+
+OpenAI-compatible Sber500 / Disrupt gateway (`POST /chat/completions`, strict `json_schema` structured output, Bearer key). Set in `.env`:
+
+```
+LLM_PROVIDER=sber500
+SBER500_API_KEY=<gateway API key>
+SBER500_MODEL=gigachat-3-pro
+SBER500_BASE_URL=https://shared1.multitool.works:4000/v1
+SBER500_TIMEOUT_SECONDS=30
+```
+
+Required: `SBER500_API_KEY`.
+`SBER500_MODEL` defaults to `gigachat-3-pro`; when explicitly set, it must not be empty.
+No automatic retries (HTTP 429 is returned to the client as 429).
+```powershell
+docker compose up -d --force-recreate app
+```
+
 ## SWITCH TO OPENAI
 
 ```dotenv

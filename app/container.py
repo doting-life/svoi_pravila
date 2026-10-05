@@ -34,6 +34,7 @@ from app.tools.llm import (
     GigaChatStructuredLLMProvider,
     LLMGenerateTool,
     OpenAIStructuredLLMProvider,
+    Sber500StructuredLLMProvider,
     StructuredLLMProvider,
 )
 from app.tools.registry import ToolRegistry
@@ -84,6 +85,14 @@ def build_llm_provider(settings: AppSettings) -> tuple[StructuredLLMProvider, As
             max_retries=settings.deepseek_max_retries,
         )
         return deepseek_provider, deepseek_provider.aclose
+    if settings.llm_provider == "sber500":
+        sber500_provider = Sber500StructuredLLMProvider(
+            api_key=settings.sber500_api_key.get_secret_value(),  # type: ignore[union-attr]
+            model=settings.sber500_model or "",
+            base_url=settings.sber500_base_url,
+            timeout_seconds=settings.sber500_timeout_seconds,
+        )
+        return sber500_provider, sber500_provider.aclose
     return FakeStructuredLLMProvider(), None
 
 

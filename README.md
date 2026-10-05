@@ -55,7 +55,7 @@ Full description with lifecycle, data, deployment and failure diagrams: **[docs/
 - **Frontend:** React, TypeScript, Vite. Generated TypeScript client in `clients/typescript`.
 - **Storage:** PostgreSQL 17, Redis 7
 - **Runtime:** Docker Compose
-- **LLM:** GigaChat, OpenAI, DeepSeek (switch with `LLM_PROVIDER`), plus a fake provider for development and tests
+- **LLM:** GigaChat, OpenAI, DeepSeek, Sber500 OpenAI-compatible gateway (switch with `LLM_PROVIDER`)
 - **Load testing:** k6 (run via Docker)
 
 ## Repository structure
@@ -89,8 +89,8 @@ All settings are environment variables. [.env.example](.env.example) lists every
 | Category | Variables (examples) |
 |---|---|
 | Runtime | `APP_ENV`, `APP_HOST`, `APP_PORT` |
-| LLM selection | `LLM_PROVIDER` (`fake`/`openai`/`gigachat`/`deepseek`), `LLM_SELF_CHECK_MODE` |
-| Provider credentials and models | `GIGACHAT_*`, `OPENAI_*`, `DEEPSEEK_*` |
+| LLM selection | `LLM_PROVIDER` (`fake`/`openai`/`gigachat`/`deepseek`/`sber500`), `LLM_SELF_CHECK_MODE` |
+| Provider credentials and models | `GIGACHAT_*`, `OPENAI_*`, `DEEPSEEK_*`, `SBER500_*` |
 | Persistence | `RELATIONSHIP_BACKEND`, `DATABASE_URL`, `CHECKPOINT_BACKEND`, `REDIS_URL`, `REDIS_CHECKPOINT_TTL_SECONDS` |
 | Telegram | `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_INIT_DATA_MAX_AGE_SECONDS` |
 | Mini App | `MINIAPP_STATIC_DIR` |
