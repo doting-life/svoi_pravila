@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable, Coroutine, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.artifacts import AssistRequest, DeliveryResponse, RelationshipRule, WorkflowName
@@ -11,7 +13,43 @@ from app.integrations.telegram import TelegramInitData, TelegramInitDataError, T
 from app.repositories import RelationshipCreate, RelationshipRecord, RelationshipUpdate, UserRecord
 
 
-router = APIRouter(prefix="/v1/miniapp", tags=["miniapp"])
+class ConsentRequiredError(BaseModel):
+    """403 body: the Telegram user has no current personal-data consent. Consent is given in the bot via /start."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    error: Literal["consent_required"] = "consent_required"
+    message: str
+    bot_command: Literal["/start"] = "/start"
+
+
+CONSENT_REQUIRED_MESSAGE = "Personal data processing consent is required. Open the Telegram bot and send /start."
+
+
+class ConsentRequired(Exception):
+    """Raised by the Mini App auth dependency; rendered as a flat ConsentRequiredError 403 body."""
+
+
+class MiniAppRoute(APIRoute):
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        handler = super().get_route_handler()
+
+        async def route_handler(request: Request) -> Response:
+            try:
+                return await handler(request)
+            except ConsentRequired:
+                body = ConsentRequiredError(message=CONSENT_REQUIRED_MESSAGE)
+                return JSONResponse(status_code=status.HTTP_403_FORBIDDEN, content=body.model_dump())
+
+        return route_handler
+
+
+router = APIRouter(
+    prefix="/v1/miniapp",
+    tags=["miniapp"],
+    route_class=MiniAppRoute,
+    responses={status.HTTP_403_FORBIDDEN: {"model": ConsentRequiredError, "description": "Consent required"}},
+)
 
 
 class UserView(BaseModel):
@@ -132,6 +170,15 @@ async def authenticate_miniapp_user(
     except TelegramInitDataError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
 
+    account = getattr(container, "account", None)
+    if account is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Account service is not configured",
+        )
+    # Consent is checked before any user record is created or read.
+    if not await account.is_active(init_data.user.id):
+        raise ConsentRequired()
     user = await container.users.get_or_create_from_telegram(init_data.user)
     return AuthenticatedMiniAppUser(user=user, init_data=init_data)
 

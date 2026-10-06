@@ -1,0 +1,11 @@
+/*
+ * Native <select> popups on Telegram Desktop (Windows Chromium) inherit the
+ * option text colour from the select (white in dark theme) but draw their own
+ * light background. Give options explicit theme colours so the popup stays
+ * readable. Mobile native pickers ignore these rules.
+ */
+select option,
+select optgroup {
+  background-color: var(--tgui--section_bg_color, var(--tg-theme-section-bg-color, #fff));
+  color: var(--tgui--text_color, var(--tg-theme-text-color, #000));
+}

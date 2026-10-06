@@ -69,6 +69,15 @@ v0.6
 - Comparison harness: `scripts/compare_providers.py` with synthetic cases in `evals/cases/`. It does no scoring.
 - Tests use mocked transports/clients only (`tests/test_llm_providers.py`). No real provider calls have been made, so real-provider quality is unverified.
 
+## Personal data consent (telegram-consent)
+
+- `consents` table and repositories (`migrations/0003_consents.sql`, not yet applied to any live database), `AccountService` (idempotent `/start`, accept/decline/revoke, two-phase delete, in-memory export).
+- Telegram bot: consent gate before user creation/workflows, consent/service commands and callbacks, prompt `answerCallbackQuery`.
+- Mini App API: consent gate on every `/v1/miniapp/*` endpoint; `403` returns the flat `ConsentRequiredError` body `{error, message, bot_command}` (runtime body asserted against the OpenAPI schema in tests).
+- TypeScript client: `ConsentRequiredError` type, `isConsentRequired` / `isConsentRequiredError`.
+- Frontend: dedicated consent_required screen (Russian/English) with a link to @DotingLifeBot and `/start` instruction; other 403 bodies stay generic errors.
+- Not yet done: applying migration 0003 and live Docker/Telegram verification.
+
 ## Current validation
 
 - Backend: 103 pytest tests pass (`pytest -q`), including 31 mocked GigaChat/DeepSeek/provider-selection tests, OpenAPI contract, fixtures, Python example smoke and curl coverage tests; `python scripts/export_openapi.py --check` passes.

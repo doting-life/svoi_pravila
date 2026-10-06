@@ -258,6 +258,26 @@ export interface components {
             relationships: components["schemas"]["RelationshipView"][];
             user: components["schemas"]["UserView"];
         };
+        /**
+         * ConsentRequiredError
+         * @description 403 body: the Telegram user has no current personal-data consent. Consent is given in the bot via /start.
+         */
+        ConsentRequiredError: {
+            /**
+             * Bot Command
+             * @default /start
+             * @constant
+             */
+            bot_command?: "/start";
+            /**
+             * Error
+             * @default consent_required
+             * @constant
+             */
+            error?: "consent_required";
+            /** Message */
+            message: string;
+        };
         /** DeliveryResponse */
         DeliveryResponse: {
             /**
@@ -560,6 +580,15 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveryResponse"];
                 };
             };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -591,6 +620,15 @@ export interface operations {
                     "application/json": components["schemas"]["AuthResponse"];
                 };
             };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -620,6 +658,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BootstrapResponse"];
+                };
+            };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
                 };
             };
             /** @description Validation Error */
@@ -655,6 +702,15 @@ export interface operations {
                     "application/json": components["schemas"]["UserView"];
                 };
             };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -684,6 +740,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RelationshipView"][];
+                };
+            };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
                 };
             };
             /** @description Validation Error */
@@ -721,6 +786,15 @@ export interface operations {
                     "application/json": components["schemas"]["RelationshipView"];
                 };
             };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -751,6 +825,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -789,6 +872,15 @@ export interface operations {
                     "application/json": components["schemas"]["RelationshipView"];
                 };
             };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -824,6 +916,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RelationshipRule"];
+                };
+            };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
                 };
             };
             /** @description Validation Error */
@@ -864,6 +965,15 @@ export interface operations {
                     "application/json": components["schemas"]["RelationshipRule"];
                 };
             };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -895,6 +1005,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Consent required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentRequiredError"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -5,6 +5,7 @@ import io
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -16,8 +17,13 @@ from app.artifacts import AssistRequest, WorkflowName
 from app.checkpoints import InMemoryCheckpointStore
 from app.observability import RequestTraceSink, TraceEvent
 from app.observability.metrics import EVENT_COLUMNS, DateRange, percentile, summarize
-from app.observability.postgres_sink import PostgresTraceSink
-from app.persistence import ServiceEventModel, build_async_engine, build_session_factory, create_schema
+from app.observability.postgres_sink import (
+    PostgresTraceSink,
+    anonymize_service_events_in,
+    event_to_row,
+    insert_service_events_in,
+)
+from app.persistence import ServiceEventModel, UserModel, build_async_engine, build_session_factory, create_schema
 from app.repositories import InMemoryRelationshipRepository
 from app.settings import AppSettings
 from app.skills import SkillLoader
@@ -71,6 +77,66 @@ async def stored(sessions: Any) -> list[ServiceEventModel]:
         return list((await session.execute(select(ServiceEventModel).order_by(ServiceEventModel.id))).scalars())
 
 
+async def seed_user(sessions: Any, user_id: str, telegram_user_id: int = 1) -> None:
+    async with sessions() as session:
+        session.add(UserModel(user_id=user_id, telegram_user_id=telegram_user_id, first_name="T"))
+        await session.commit()
+
+
+async def test_insert_service_events_keeps_known_user_and_nulls_deleted_user(sessions) -> None:
+    await seed_user(sessions, "u-known")
+    rows = [
+        event_to_row(TraceEvent(uuid4(), "soften", "request", "ok", 1, 10, user_id="u-known", metadata={"relationship_id": "rel_1"})),
+        event_to_row(TraceEvent(uuid4(), "soften", "request", "ok", 1, 10, user_id="u-gone", metadata={"relationship_id": "rel_2"})),
+        event_to_row(TraceEvent(uuid4(), "soften", "request", "ok", 1, 10, user_id=None)),
+    ]
+    async with sessions() as session:
+        await insert_service_events_in(session, rows)
+        await session.commit()
+    known, gone, anonymous = await stored(sessions)
+    assert (known.user_id, known.relationship_id) == ("u-known", "rel_1")
+    assert (gone.user_id, gone.relationship_id) == (None, None)
+    assert (anonymous.user_id, anonymous.relationship_id) == (None, None)
+
+
+async def test_anonymize_service_events_detaches_only_target_user(sessions) -> None:
+    await seed_user(sessions, "u-a", 1)
+    await seed_user(sessions, "u-b", 2)
+    rows = [
+        event_to_row(TraceEvent(uuid4(), "soften", "request", "ok", 1, 10, user_id=uid, metadata={"relationship_id": "rel"}))
+        for uid in ("u-a", "u-a", "u-b")
+    ]
+    async with sessions() as session:
+        await insert_service_events_in(session, rows)
+        await session.commit()
+    async with sessions() as session:
+        assert await anonymize_service_events_in(session, "u-a") == 2
+        await session.commit()
+    events = await stored(sessions)
+    assert [(e.user_id, e.relationship_id) for e in events] == [(None, None), (None, None), ("u-b", "rel")]
+
+
+async def test_insert_service_events_locks_users_for_key_share() -> None:
+    from sqlalchemy.dialects import postgresql
+
+    class RecordingSession:
+        def __init__(self) -> None:
+            self.statements: list[Any] = []
+
+        async def execute(self, statement: Any, *args: Any) -> Any:
+            self.statements.append(statement)
+            return SimpleNamespace(scalars=lambda: ["u-1"])
+
+    session = RecordingSession()
+    row = event_to_row(TraceEvent(uuid4(), "soften", "request", "ok", 1, 10, user_id="u-1"))
+    await insert_service_events_in(session, [row])  # type: ignore[arg-type]
+
+    lock_sql = str(session.statements[0].compile(dialect=postgresql.dialect()))
+    assert lock_sql.rstrip().endswith("FOR KEY SHARE")
+    assert "users" in lock_sql
+    assert len(session.statements) == 2 and row["user_id"] == "u-1"
+
+
 def ev(
     user: str | None,
     *,
@@ -102,6 +168,7 @@ def ev(
 
 
 async def test_postgres_sink_persists_engine_trace_without_raw_text(sessions) -> None:
+    await seed_user(sessions, "u-1")
     sink = PostgresTraceSink(sessions)
     provider = ScriptedProvider([(EN_BAD, COMMITMENT_FAILURE), (EN_GOOD, {"all_passed": True, "failures": [], "violated_rule_ids": []})])
     result = await make_engine(provider, sink).execute(WorkflowName.HELP_SAY, en_request())

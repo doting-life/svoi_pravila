@@ -139,6 +139,7 @@ See [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md).
 ## Privacy and security
 
 - Identity comes only from validated Telegram `initData`. Relationships and rules are scoped to their owner.
+- Personal-data consent is required: users give it in @DotingLifeBot via `/start`. Without it the bot runs no workflows and the Mini App API returns `403 {"error": "consent_required", "message": ..., "bot_command": "/start"}`; the Mini App shows a consent screen linking to the bot. Users can revoke consent, export data and delete their account in the bot. Requires `migrations/0003_consents.sql`.
 - Raw messages, prompts and model output are **not** stored in PostgreSQL or telemetry. Redis checkpoints temporarily hold active request state (TTL, default 20 min) for retry and resume.
 - Secrets live only in `.env`. Relationship rules are treated as untrusted data, and system policy takes precedence over them.
 

@@ -51,6 +51,27 @@ components:
       - relationships
       title: BootstrapResponse
       type: object
+    ConsentRequiredError:
+      additionalProperties: false
+      description: '403 body: the Telegram user has no current personal-data consent. Consent is given in the bot via /start.'
+      properties:
+        bot_command:
+          const: /start
+          default: /start
+          title: Bot Command
+          type: string
+        error:
+          const: consent_required
+          default: consent_required
+          title: Error
+          type: string
+        message:
+          title: Message
+          type: string
+      required:
+      - message
+      title: ConsentRequiredError
+      type: object
     DeliveryResponse:
       additionalProperties: false
       properties:
@@ -444,6 +465,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeliveryResponse'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -472,6 +499,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -500,6 +533,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/BootstrapResponse'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -534,6 +573,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserView'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -565,6 +610,12 @@ paths:
                 title: Response List Relationships V1 Miniapp Relationships Get
                 type: array
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -598,6 +649,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/RelationshipView'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -628,6 +685,12 @@ paths:
       responses:
         '204':
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -667,6 +730,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/RelationshipView'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -707,6 +776,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/RelationshipRule'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -743,6 +818,12 @@ paths:
       responses:
         '204':
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:
@@ -788,6 +869,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/RelationshipRule'
           description: Successful Response
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequiredError'
+          description: Consent required
         '422':
           content:
             application/json:

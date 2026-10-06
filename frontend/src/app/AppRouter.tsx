@@ -1,9 +1,10 @@
 import { HashRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
-import { toErrorStatus } from "../api/errors";
+import { isConsentRequiredError, toErrorStatus } from "../api/errors";
 import { ErrorState, LoadingState } from "../components/common";
 import { Button, Row } from "../components/ui";
 import { MainScreen } from "../features/assist/MainScreen";
+import { ConsentRequiredScreen } from "../features/consent/ConsentRequiredScreen";
 import { OnboardingScreen } from "../features/onboarding/OnboardingScreen";
 import { RelationshipDetailsScreen } from "../features/relationships/RelationshipDetailsScreen";
 import { RelationshipsScreen } from "../features/relationships/RelationshipsScreen";
@@ -18,6 +19,16 @@ export function BootstrapGate() {
 
   if (bootstrap.isPending) {
     return <LoadingState language={language} />;
+  }
+  if (bootstrap.isError && isConsentRequiredError(bootstrap.error)) {
+    return (
+      <ConsentRequiredScreen
+        language={language}
+        onRetry={() => {
+          void bootstrap.refetch();
+        }}
+      />
+    );
   }
   if (bootstrap.isError) {
     return (

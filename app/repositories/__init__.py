@@ -1,3 +1,10 @@
+from app.repositories.consents import (
+    ConsentRecord,
+    ConsentRepository,
+    InMemoryConsentRepository,
+    OnboardingRecord,
+    PostgresConsentRepository,
+)
 from app.repositories.postgres_relationships import PostgresRelationshipRepository
 from app.repositories.postgres_users import PostgresUserRepository
 from app.repositories.relationships import (
@@ -20,4 +27,9 @@ __all__ = [
     "UserRecord",
     "InMemoryUserRepository",
     "PostgresUserRepository",
+    "ConsentRepository",
+    "ConsentRecord",
+    "OnboardingRecord",
+    "InMemoryConsentRepository",
+    "PostgresConsentRepository",
 ]

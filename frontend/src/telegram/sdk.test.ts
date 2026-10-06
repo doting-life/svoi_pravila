@@ -5,7 +5,15 @@ vi.mock("@tma.js/sdk-react", () => ({
   init: vi.fn(),
 }));
 
-import { getLaunchLanguage, getRawInitData, initTelegram, resolveDevInitData, useBackButton } from "./sdk";
+import {
+  getBotLink,
+  getLaunchLanguage,
+  getRawInitData,
+  initTelegram,
+  openTelegramLink,
+  resolveDevInitData,
+  useBackButton,
+} from "./sdk";
 
 describe("telegram adapter", () => {
   beforeEach(() => {
@@ -105,5 +113,23 @@ describe("telegram adapter", () => {
   it("ignores development fallback when not in development mode", () => {
     expect(resolveDevInitData(false, "dev_data")).toBeNull();
     expect(resolveDevInitData(true, "dev_data")).toBe("dev_data");
+  });
+});
+
+describe("consent bot link", () => {
+  afterEach(() => {
+    window.Telegram = undefined;
+  });
+
+  it("defaults to @DotingLifeBot with a /start payload", () => {
+    expect(getBotLink(undefined)).toBe("https://t.me/DotingLifeBot?start=consent");
+    expect(getBotLink("@OtherBot")).toBe("https://t.me/OtherBot?start=consent");
+  });
+
+  it("opens the link through Telegram when available", () => {
+    const open = vi.fn();
+    window.Telegram = { WebApp: { openTelegramLink: open } };
+    openTelegramLink("https://t.me/DotingLifeBot");
+    expect(open).toHaveBeenCalledWith("https://t.me/DotingLifeBot");
   });
 });

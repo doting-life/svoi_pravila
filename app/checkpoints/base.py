@@ -23,7 +23,7 @@ class CheckpointSnapshot(BaseModel):
 
 class CheckpointStore(ABC):
     @abstractmethod
-    async def save(self, snapshot: CheckpointSnapshot) -> None:
+    async def save(self, snapshot: CheckpointSnapshot, *, user_id: str | None = None) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -31,5 +31,10 @@ class CheckpointStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def delete(self, request_id: UUID) -> None:
+    async def delete(self, request_id: UUID, *, user_id: str | None = None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete_for_user(self, user_id: str) -> int:
+        """Delete every checkpoint indexed for user_id. Returns the number of checkpoint keys removed."""
         raise NotImplementedError

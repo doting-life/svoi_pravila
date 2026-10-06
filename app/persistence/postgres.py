@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -19,6 +20,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -126,6 +128,54 @@ class ServiceEventModel(Base):
     ruleset_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     self_check_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
     error_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class TelegramOnboardingModel(Base):
+    """Pre-consent onboarding state. Holds only the Telegram ID, no profile data."""
+
+    __tablename__ = "telegram_onboarding"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('consent_pending', 'active', 'revoked')", name="ck_telegram_onboarding_state"
+        ),
+        CheckConstraint(
+            "pending_action IN ('delete_confirm', 'export_confirm')",
+            name="ck_telegram_onboarding_pending_action",
+        ),
+    )
+
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    pending_action: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    pending_action_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class UserConsentModel(Base):
+    __tablename__ = "user_consents"
+    __table_args__ = (
+        CheckConstraint("kind IN ('pd_processing')", name="ck_user_consents_kind"),
+        Index(
+            "ux_user_consents_active",
+            "telegram_user_id",
+            "kind",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+            sqlite_where=text("revoked_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    version: Mapped[str] = mapped_column(String(32), nullable=False)
+    text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 def build_async_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:

@@ -81,6 +81,11 @@ export const ru = {
   errorNotFound: "Не найдено.",
   errorGeneric: "Произошла ошибка.",
   errorNetwork: "Сетевой сбой",
+  consentRequiredTitle: "Нужно согласие на обработку данных",
+  consentRequiredText:
+    "Чтобы пользоваться приложением, дайте согласие на обработку персональных данных в Telegram-боте. Откройте бота, отправьте команду /start и нажмите «Согласен», затем вернитесь сюда.",
+  consentRequiredOpenBot: "Открыть бота",
+  consentRequiredRetry: "Я дал согласие — проверить",
 };
 
 export type TranslationDictionary = typeof ru;

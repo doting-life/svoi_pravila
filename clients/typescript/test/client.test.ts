@@ -12,6 +12,7 @@ import {
   isDecodeResult,
   isDeliveryResponse,
   isHelpSayResult,
+  isConsentRequiredError,
   isMiniAppApiError,
   isSoftenResult,
   isWorkflowName,
@@ -288,5 +289,37 @@ describe("guards", () => {
     expect(getStructuredResult(fixture<DeliveryResponse>("delivery_error.json"))).toBeNull();
     const mismatched = { ...fixture<DeliveryResponse>("delivery_soften.json"), workflow: "decode" as const };
     expect(getStructuredResult(mismatched)).toBeNull();
+  });
+});
+
+describe("consent required", () => {
+  const body = {
+    error: "consent_required",
+    message: "Personal data processing consent is required. Open the Telegram bot and send /start.",
+    bot_command: "/start",
+  };
+
+  it("matches the ConsentRequiredError schema in docs/openapi.json", () => {
+    const spec = JSON.parse(readFileSync(resolve(ROOT, "docs/openapi.json"), "utf-8"));
+    const schema = spec.components.schemas.ConsentRequiredError;
+    expect(Object.keys(schema.properties).sort()).toEqual(Object.keys(body).sort());
+    expect(schema.additionalProperties).toBe(false);
+  });
+
+  it("maps the exact 403 body to isConsentRequired", async () => {
+    const { fetch } = mockFetch(() => json(body, 403));
+    const client = createMiniAppClient({ baseUrl: "http://api", getInitData: () => "init", fetch });
+    const error = await client.bootstrap().catch((err: unknown) => err);
+    expect(isConsentRequiredError(error)).toBe(true);
+    expect((error as MiniAppApiError).status).toBe(403);
+    expect((error as MiniAppApiError).detail).toBe(body.message);
+    expect((error as MiniAppApiError).body).toEqual(body);
+  });
+
+  it("does not treat other 403 bodies as consent required", async () => {
+    const { fetch } = mockFetch(() => json({ detail: "Forbidden" }, 403));
+    const client = createMiniAppClient({ baseUrl: "http://api", getInitData: () => "init", fetch });
+    const error = await client.bootstrap().catch((err: unknown) => err);
+    expect(isConsentRequiredError(error)).toBe(false);
   });
 });

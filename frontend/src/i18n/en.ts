@@ -83,4 +83,9 @@ export const en: TranslationDictionary = {
   errorNotFound: "Not found.",
   errorGeneric: "Something went wrong.",
   errorNetwork: "Network error",
+  consentRequiredTitle: "Consent to data processing is required",
+  consentRequiredText:
+    "To use the app, give consent to personal data processing in the Telegram bot. Open the bot, send /start and tap «Согласен», then come back here.",
+  consentRequiredOpenBot: "Open the bot",
+  consentRequiredRetry: "I have given consent — check again",
 };

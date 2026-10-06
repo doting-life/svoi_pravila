@@ -47,31 +47,56 @@ class PostgresUserRepository(UserRepository):
 
     async def get_or_create_from_telegram(self, telegram_user: TelegramWebAppUser) -> UserRecord:
         async with self.sessions() as session:
-            model = (
-                await session.execute(
-                    select(UserModel).where(UserModel.telegram_user_id == telegram_user.id)
-                )
-            ).scalar_one_or_none()
-            now = datetime.now(timezone.utc)
-            if model is None:
-                model = UserModel(
-                    user_id=f"usr_{uuid4().hex}",
-                    telegram_user_id=telegram_user.id,
-                    first_name=telegram_user.first_name,
-                    last_name=telegram_user.last_name,
-                    username=telegram_user.username,
-                    language_code=telegram_user.language_code,
-                )
-                session.add(model)
-            else:
-                model.first_name = telegram_user.first_name
-                model.last_name = telegram_user.last_name
-                model.username = telegram_user.username
-                model.language_code = telegram_user.language_code
-                model.updated_at = now
+            model = await self.get_or_create_from_telegram_in(session, telegram_user)
             await session.commit()
             await session.refresh(model)
             return self._to_record(model)
+
+    async def get_or_create_from_telegram_in(
+        self, session: AsyncSession, telegram_user: TelegramWebAppUser
+    ) -> UserModel:
+        """Create/update the user inside the caller's session. Flushes but never commits."""
+        model = (
+            await session.execute(
+                select(UserModel).where(UserModel.telegram_user_id == telegram_user.id)
+            )
+        ).scalar_one_or_none()
+        now = datetime.now(timezone.utc)
+        if model is None:
+            model = UserModel(
+                user_id=f"usr_{uuid4().hex}",
+                telegram_user_id=telegram_user.id,
+                first_name=telegram_user.first_name,
+                last_name=telegram_user.last_name,
+                username=telegram_user.username,
+                language_code=telegram_user.language_code,
+            )
+            session.add(model)
+        else:
+            model.first_name = telegram_user.first_name
+            model.last_name = telegram_user.last_name
+            model.username = telegram_user.username
+            model.language_code = telegram_user.language_code
+            model.updated_at = now
+        await session.flush()
+        return model
+
+    async def delete(self, user_id: str) -> bool:
+        async with self.sessions() as session:
+            deleted = await self.delete_in(session, user_id)
+            await session.commit()
+            return deleted
+
+    async def delete_in(self, session: AsyncSession, user_id: str) -> bool:
+        """Delete the user (relationships/rules cascade) inside the caller's session without committing."""
+        model = (
+            await session.execute(select(UserModel).where(UserModel.user_id == user_id))
+        ).scalar_one_or_none()
+        if model is None:
+            return False
+        await session.delete(model)
+        await session.flush()
+        return True
 
     async def set_default_relationship(self, user_id: str, relationship_id: str | None) -> UserRecord:
         async with self.sessions() as session:
