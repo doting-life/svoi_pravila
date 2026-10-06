@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 
 from app.artifacts import SoftenResult, WorkflowName
-from app.checkpoints import CheckpointSnapshot, RedisCheckpointStore
+from app.checkpoints import CheckpointSnapshot, InMemoryCheckpointStore, RedisCheckpointStore
 from app.integrations.telegram import parse_inline_query, parse_message_command
 from app.persistence import RelationshipModel, RelationshipRuleModel
 from app.repositories import PostgresRelationshipRepository
@@ -19,15 +19,135 @@ from app.tools.llm.openai_provider import OpenAIStructuredLLMProvider
 class FakeRedis:
     def __init__(self) -> None:
         self.items: dict[str, str] = {}
+        self.sets: dict[str, set[str]] = {}
+        self.ttls: dict[str, int] = {}
+        self.pipelines: list[FakePipeline] = []
 
     async def set(self, key: str, value: str, ex: int | None = None) -> None:
         self.items[key] = value
+        if ex is not None:
+            self.ttls[key] = ex
 
     async def get(self, key: str):
         return self.items.get(key)
 
-    async def delete(self, key: str) -> None:
+    async def delete(self, key: str) -> int:
+        existed = key in self.items or key in self.sets
         self.items.pop(key, None)
+        self.sets.pop(key, None)
+        self.ttls.pop(key, None)
+        return int(existed)
+
+    async def sadd(self, key: str, *members: str) -> int:
+        bucket = self.sets.setdefault(key, set())
+        before = len(bucket)
+        bucket.update(members)
+        return len(bucket) - before
+
+    async def srem(self, key: str, *members: str) -> int:
+        bucket = self.sets.get(key, set())
+        removed = len(bucket & set(members))
+        bucket.difference_update(members)
+        return removed
+
+    async def smembers(self, key: str) -> set[bytes]:
+        return {member.encode("utf-8") for member in self.sets.get(key, set())}
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        self.ttls[key] = seconds
+        return key in self.sets or key in self.items
+
+    def pipeline(self, transaction: bool = True) -> "FakePipeline":
+        pipe = FakePipeline(self, transaction)
+        self.pipelines.append(pipe)
+        return pipe
+
+
+class FakePipeline:
+    """Queues commands and applies them only on execute(), mirroring MULTI/EXEC."""
+
+    def __init__(self, redis: FakeRedis, transaction: bool) -> None:
+        self.redis = redis
+        self.transaction = transaction
+        self.commands: list[tuple[str, tuple, dict]] = []
+        self.executed = False
+
+    def __getattr__(self, name: str):
+        if name not in {"set", "sadd", "expire", "delete", "srem"}:
+            raise AttributeError(name)
+
+        def queue(*args, **kwargs):
+            self.commands.append((name, args, kwargs))
+            return self
+
+        return queue
+
+    async def execute(self) -> list:
+        self.executed = True
+        return [await getattr(self.redis, name)(*args, **kwargs) for name, args, kwargs in self.commands]
+
+
+def _snapshot(request_id=None) -> CheckpointSnapshot:
+    return CheckpointSnapshot(
+        request_id=request_id or uuid4(),
+        workflow="soften",
+        stage="generate",
+        status="in_progress",
+        state={},
+    )
+
+
+@pytest.mark.asyncio
+async def test_redis_checkpoint_user_index_lifecycle() -> None:
+    redis = FakeRedis()
+    store = RedisCheckpointStore(redis, ttl_seconds=60)
+    first, second, other = _snapshot(), _snapshot(), _snapshot()
+    await store.save(first, user_id="usr_a")
+    await store.save(second, user_id="usr_a")
+    await store.save(other, user_id="usr_b")
+    assert [cmd[0] for cmd in redis.pipelines[0].commands] == ["set", "sadd", "expire"]
+    assert all(pipe.transaction and pipe.executed for pipe in redis.pipelines)
+    assert redis.ttls[f"request:{first.request_id}"] == 60
+    assert redis.sets["user_checkpoints:usr_a"] == {f"request:{first.request_id}", f"request:{second.request_id}"}
+    assert redis.ttls["user_checkpoints:usr_a"] == 60
+
+    await store.delete(first.request_id, user_id="usr_a")
+    delete_pipe = redis.pipelines[-1]
+    assert [cmd[0] for cmd in delete_pipe.commands] == ["delete", "srem"]
+    assert delete_pipe.transaction and delete_pipe.executed
+    assert await store.load(first.request_id) is None
+    assert redis.sets["user_checkpoints:usr_a"] == {f"request:{second.request_id}"}
+
+    assert await store.delete_for_user("usr_a") == 1
+    assert await store.load(second.request_id) is None
+    assert "user_checkpoints:usr_a" not in redis.sets
+    assert await store.load(other.request_id) is not None
+    assert await store.delete_for_user("usr_missing") == 0
+
+
+@pytest.mark.asyncio
+async def test_redis_checkpoint_save_without_user_is_unindexed() -> None:
+    redis = FakeRedis()
+    store = RedisCheckpointStore(redis, ttl_seconds=60)
+    snapshot = _snapshot()
+    await store.save(snapshot)
+    assert redis.sets == {}
+    assert redis.pipelines == []
+    assert await store.load(snapshot.request_id) is not None
+    await store.delete(snapshot.request_id)
+    assert redis.pipelines == []
+    assert await store.load(snapshot.request_id) is None
+
+
+@pytest.mark.asyncio
+async def test_in_memory_checkpoint_delete_for_user() -> None:
+    store = InMemoryCheckpointStore()
+    mine, theirs = _snapshot(), _snapshot()
+    await store.save(mine, user_id="usr_a")
+    await store.save(theirs, user_id="usr_b")
+    assert await store.delete_for_user("usr_a") == 1
+    assert await store.load(mine.request_id) is None
+    assert await store.load(theirs.request_id) is not None
 
 
 @pytest.mark.asyncio

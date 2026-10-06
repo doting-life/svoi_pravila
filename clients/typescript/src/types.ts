@@ -10,6 +10,7 @@ type Schemas = components["schemas"];
 
 export type AuthResponse = Schemas["AuthResponse"];
 export type BootstrapResponse = Schemas["BootstrapResponse"];
+export type ConsentRequiredError = Schemas["ConsentRequiredError"];
 export type DeliveryResponse = Schemas["DeliveryResponse"];
 export type HTTPValidationError = Schemas["HTTPValidationError"];
 export type MiniAppAssistBody = Schemas["MiniAppAssistBody"];

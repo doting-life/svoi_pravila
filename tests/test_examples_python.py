@@ -15,6 +15,7 @@ from app.api.miniapp import BootstrapResponse, RelationshipView
 from app.api.miniapp import router as miniapp_router
 from app.artifacts import DeliveryResponse, RelationshipRule
 from app.container import build_container
+from app.integrations.telegram import TelegramWebAppUser
 from app.settings import AppSettings
 
 
@@ -32,11 +33,13 @@ def _load_example():
     return module
 
 
-def _make_app() -> FastAPI:
+async def _make_app() -> FastAPI:
     settings = AppSettings(telegram_bot_token=BOT_TOKEN)
     app = FastAPI()
     app.state.settings = settings
     app.state.container = build_container(settings)
+    # The example signs initData for Telegram user 777001; consent is given in the bot before Mini App use.
+    await app.state.container.account.accept(TelegramWebAppUser(id=777001, first_name="Example"))
     app.include_router(miniapp_router)
     return app
 
@@ -44,7 +47,7 @@ def _make_app() -> FastAPI:
 @pytest.mark.asyncio
 async def test_python_example_scenario_runs_against_api() -> None:
     example = _load_example()
-    transport = httpx.ASGITransport(app=_make_app())
+    transport = httpx.ASGITransport(app=await _make_app())
     init_data = example.sign_init_data(BOT_TOKEN)
 
     async with example.MiniAppClient("http://test", init_data, transport=transport) as client:
@@ -64,7 +67,7 @@ async def test_python_example_scenario_runs_against_api() -> None:
 @pytest.mark.asyncio
 async def test_python_example_maps_errors() -> None:
     example = _load_example()
-    transport = httpx.ASGITransport(app=_make_app())
+    transport = httpx.ASGITransport(app=await _make_app())
 
     async with example.MiniAppClient("http://test", "invalid", transport=transport) as client:
         with pytest.raises(example.MiniAppApiError) as unauthorized:

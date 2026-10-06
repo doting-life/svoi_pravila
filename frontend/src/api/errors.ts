@@ -1,1 +1,1 @@
-export { toErrorStatus } from "@svoi-pravila/miniapp-client";
+export { isConsentRequiredError, toErrorStatus } from "@svoi-pravila/miniapp-client";

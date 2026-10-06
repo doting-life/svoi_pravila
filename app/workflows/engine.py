@@ -197,7 +197,8 @@ class WorkflowEngine:
                 artifact_names=sorted(state.artifacts),
                 state=self._serialize_state(state, api_request),
                 updated_at=datetime.now(timezone.utc),
-            )
+            ),
+            user_id=api_request.user_id,
         )
 
     async def _trace(

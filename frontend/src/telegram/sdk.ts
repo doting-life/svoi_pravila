@@ -5,6 +5,7 @@ export type TelegramWebApp = {
   expand?: () => void;
   initData?: string;
   initDataUnsafe?: { user?: { language_code?: string } };
+  openTelegramLink?: (url: string) => void;
   BackButton?: {
     show: () => void;
     hide: () => void;
@@ -77,6 +78,25 @@ export function attachBackButton(handler: () => void): () => void {
 }
 
 export const useBackButton = attachBackButton;
+
+export const DEFAULT_BOT_USERNAME = "DotingLifeBot";
+
+export function getBotLink(username: string | undefined = import.meta.env.VITE_BOT_USERNAME): string {
+  const name = (username || DEFAULT_BOT_USERNAME).replace(/^@/, "");
+  return `https://t.me/${name}?start=consent`;
+}
+
+/** Opens a t.me link inside Telegram when possible, otherwise in a new browser tab. */
+export function openTelegramLink(url: string): void {
+  const webApp = getTelegramWebApp();
+  if (webApp?.openTelegramLink) {
+    webApp.openTelegramLink(url);
+    return;
+  }
+  if (typeof window !== "undefined") {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
 
 export function haptic(
     style: "light" | "medium" | "heavy" | "rigid" | "soft" = "light",

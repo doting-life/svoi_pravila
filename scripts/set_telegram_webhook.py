@@ -17,7 +17,7 @@ async def main() -> None:
         await client.set_webhook(
             url=settings.telegram_webhook_url,
             secret_token=secret,
-            allowed_updates=["inline_query", "message"],
+            allowed_updates=["inline_query", "message", "callback_query"],
         )
     finally:
         await client.aclose()

@@ -29,6 +29,22 @@ def _parse(text: str, default_workflow: WorkflowName) -> ParsedTelegramRequest:
     return ParsedTelegramRequest(workflow=default_workflow, text=stripped)
 
 
+SERVICE_COMMANDS: frozenset[str] = frozenset({"start", "revoke", "delete", "export"})
+
+
+def parse_service_command(text: str) -> str | None:
+    """Return the service command name (start/revoke/delete/export) or None.
+
+    Checked before workflow commands. Accepts an optional @botname suffix and ignores arguments.
+    """
+    stripped = text.strip()
+    if not stripped.startswith("/"):
+        return None
+    head = stripped.split(maxsplit=1)[0][1:]
+    command = head.split("@", 1)[0].casefold()
+    return command if command in SERVICE_COMMANDS else None
+
+
 def parse_inline_query(text: str, default_workflow: WorkflowName = WorkflowName.SOFTEN) -> ParsedTelegramRequest:
     return _parse(text, default_workflow)
 

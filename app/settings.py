@@ -18,7 +18,7 @@ class AppSettings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
 
-    llm_provider: Literal["fake", "openai", "gigachat", "deepseek"] = "fake"
+    llm_provider: Literal["fake", "openai", "gigachat", "deepseek", "sber500"] = "fake"
     # observe: only for initial real-provider verification; production: required.
     llm_self_check_mode: Literal["observe", "required"] = "required"
     openai_api_key: SecretStr | None = None
@@ -39,6 +39,12 @@ class AppSettings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_timeout_seconds: float = 60.0
     deepseek_max_retries: int = 2
+
+    # Sber500 / Disrupt OpenAI-compatible gateway. No hidden retries (latency budget).
+    sber500_api_key: SecretStr | None = None
+    sber500_model: str | None = "gigachat-3-pro"
+    sber500_base_url: str = "https://shared1.multitool.works:4000/v1"
+    sber500_timeout_seconds: float = 30.0
 
     relationship_backend: Literal["memory", "postgres"] = "memory"
     database_url: str | None = None
@@ -73,6 +79,11 @@ class AppSettings(BaseSettings):
                 raise ValueError("DEEPSEEK_API_KEY is required when LLM_PROVIDER=deepseek")
             if not self.deepseek_model:
                 raise ValueError("DEEPSEEK_MODEL is required when LLM_PROVIDER=deepseek")
+        if self.llm_provider == "sber500":
+            if self.sber500_api_key is None or not self.sber500_api_key.get_secret_value():
+                raise ValueError("SBER500_API_KEY is required when LLM_PROVIDER=sber500")
+            if not self.sber500_model:
+                raise ValueError("SBER500_MODEL is required when LLM_PROVIDER=sber500")
         if self.relationship_backend == "postgres" and not self.database_url:
             raise ValueError("DATABASE_URL is required when RELATIONSHIP_BACKEND=postgres")
         if self.checkpoint_backend == "redis" and not self.redis_url:

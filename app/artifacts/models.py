@@ -105,7 +105,7 @@ class DecodeResult(Artifact):
 class HelpSayResult(Artifact):
     message: str = Field(min_length=1)
     tone: str
-    preserved_intent: str
+    preserved_intent: str = Field(min_length=1)
     warnings: list[str] = Field(default_factory=list)
 
 

@@ -39,6 +39,11 @@ class UserRepository(ABC):
     async def set_default_relationship(self, user_id: str, relationship_id: str | None) -> UserRecord:
         raise NotImplementedError
 
+    @abstractmethod
+    async def delete(self, user_id: str) -> bool:
+        """Delete the user and owned relationships/rules. Returns False when the user does not exist."""
+        raise NotImplementedError
+
 
 class InMemoryUserRepository(UserRepository):
     def __init__(self) -> None:
@@ -87,3 +92,10 @@ class InMemoryUserRepository(UserRepository):
         record.default_relationship_id = relationship_id
         record.updated_at = datetime.now(timezone.utc)
         return deepcopy(record)
+
+    async def delete(self, user_id: str) -> bool:
+        record = self._by_id.pop(user_id, None)
+        if record is None:
+            return False
+        self._by_telegram_id.pop(record.telegram_user_id, None)
+        return True

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from redis.asyncio import Redis
 else:
     Redis = Any  # type: ignore[misc,assignment]
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.checkpoints import CheckpointStore, InMemoryCheckpointStore, RedisCheckpointStore
 from app.integrations.telegram import TelegramBotClient
@@ -25,6 +25,8 @@ from app.repositories import (
     UserRecord,
     UserRepository,
 )
+from app.repositories.consents import ConsentRepository, InMemoryConsentRepository, PostgresConsentRepository
+from app.services import AccountService
 from app.settings import AppSettings
 from app.skills import SkillLoader
 from app.stages import StageRegistry
@@ -34,6 +36,7 @@ from app.tools.llm import (
     GigaChatStructuredLLMProvider,
     LLMGenerateTool,
     OpenAIStructuredLLMProvider,
+    Sber500StructuredLLMProvider,
     StructuredLLMProvider,
 )
 from app.tools.registry import ToolRegistry
@@ -84,6 +87,14 @@ def build_llm_provider(settings: AppSettings) -> tuple[StructuredLLMProvider, As
             max_retries=settings.deepseek_max_retries,
         )
         return deepseek_provider, deepseek_provider.aclose
+    if settings.llm_provider == "sber500":
+        sber500_provider = Sber500StructuredLLMProvider(
+            api_key=settings.sber500_api_key.get_secret_value(),  # type: ignore[union-attr]
+            model=settings.sber500_model or "",
+            base_url=settings.sber500_base_url,
+            timeout_seconds=settings.sber500_timeout_seconds,
+        )
+        return sber500_provider, sber500_provider.aclose
     return FakeStructuredLLMProvider(), None
 
 
@@ -94,6 +105,8 @@ class ApplicationContainer:
     checkpoints: CheckpointStore
     relationships: RelationshipRepository
     users: UserRepository
+    consents: ConsentRepository
+    account: AccountService
     telegram: TelegramBotClient | None = None
     redis: Redis | None = None
     database_engine: AsyncEngine | None = None
@@ -139,6 +152,8 @@ def build_container(settings: AppSettings | None = None) -> ApplicationContainer
         sessions = build_session_factory(database_engine)
         relationships: RelationshipRepository = PostgresRelationshipRepository(sessions)
         users: UserRepository = PostgresUserRepository(sessions)
+        consents: ConsentRepository = PostgresConsentRepository(sessions)
+        account_sessions: async_sessionmaker[AsyncSession] | None = sessions
         closers.append(database_engine.dispose)
         postgres_trace = PostgresTraceSink(sessions)
         closers.append(postgres_trace.drain)
@@ -156,11 +171,21 @@ def build_container(settings: AppSettings | None = None) -> ApplicationContainer
             )
         )
         users = memory_users
+        consents = InMemoryConsentRepository()
+        account_sessions = None
 
     telegram: TelegramBotClient | None = None
     if settings.telegram_enabled:
         telegram = TelegramBotClient(settings.telegram_bot_token.get_secret_value())  # type: ignore[union-attr]
         closers.append(telegram.aclose)
+
+    account = AccountService(
+        consents=consents,
+        users=users,
+        relationships=relationships,
+        checkpoints=checkpoints,
+        sessions=account_sessions,
+    )
 
     engine = WorkflowEngine(
         WorkflowDependencies(
@@ -179,6 +204,8 @@ def build_container(settings: AppSettings | None = None) -> ApplicationContainer
         checkpoints=checkpoints,
         relationships=relationships,
         users=users,
+        consents=consents,
+        account=account,
         telegram=telegram,
         redis=redis,
         database_engine=database_engine,

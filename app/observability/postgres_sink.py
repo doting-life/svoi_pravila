@@ -6,11 +6,11 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import insert
+from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.observability.trace import TraceEvent
-from app.persistence.postgres import ServiceEventModel
+from app.persistence.postgres import ServiceEventModel, UserModel
 
 logger = logging.getLogger("svoi_pravila.observability")
 
@@ -64,6 +64,43 @@ def event_to_row(event: TraceEvent) -> dict[str, Any]:
     }
 
 
+async def insert_service_events_in(session: AsyncSession, rows: list[dict[str, Any]]) -> None:
+    """Insert telemetry rows, serialised against account deletion. Does not commit.
+
+    Referenced users are locked FOR KEY SHARE in the same transaction as the INSERT, so a
+    concurrent deletion (which locks users FOR UPDATE before anonymising service_events) either
+    waits for this insert and then anonymises it, or commits first; in that case the user row is
+    gone and user_id/relationship_id are written as NULL.
+    """
+    user_ids = {row["user_id"] for row in rows if row.get("user_id")}
+    existing: set[str] = set()
+    if user_ids:
+        existing = set(
+            (
+                await session.execute(
+                    select(UserModel.user_id)
+                    .where(UserModel.user_id.in_(sorted(user_ids)))
+                    .with_for_update(read=True, key_share=True)
+                )
+            ).scalars()
+        )
+    for row in rows:
+        if row.get("user_id") and row["user_id"] not in existing:
+            row["user_id"] = None
+            row["relationship_id"] = None
+    await session.execute(insert(ServiceEventModel), rows)
+
+
+async def anonymize_service_events_in(session: AsyncSession, user_id: str) -> int:
+    """Detach telemetry from a user being deleted. Caller must already hold users FOR UPDATE. Does not commit."""
+    result = await session.execute(
+        update(ServiceEventModel)
+        .where(ServiceEventModel.user_id == user_id)
+        .values(user_id=None, relationship_id=None)
+    )
+    return int(result.rowcount or 0)
+
+
 class PostgresTraceSink:
     """Persists privacy-safe trace rows to service_events.
 
@@ -98,7 +135,7 @@ class PostgresTraceSink:
     async def _write(self, rows: list[dict[str, Any]]) -> None:
         try:
             async with self._sessions() as session:
-                await session.execute(insert(ServiceEventModel), rows)
+                await insert_service_events_in(session, rows)
                 await session.commit()
         except Exception as exc:
             logger.warning(

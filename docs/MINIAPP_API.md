@@ -18,6 +18,20 @@ The HTTP auth layer is intentionally stateless (since v0.3): it validates `initD
 
 If `TELEGRAM_BOT_TOKEN` is not configured, every Mini App endpoint returns `503`. Missing, tampered or expired `initData` returns `401`.
 
+### Consent required (`403`)
+
+Every Mini App endpoint requires a current personal-data consent given in the Telegram bot via `/start`. Consent is checked after `initData` validation and before any user record is created or read. Without consent the response is `403` with this exact flat body (OpenAPI schema `ConsentRequiredError`, no FastAPI `detail` wrapper):
+
+```json
+{
+  "error": "consent_required",
+  "message": "Personal data processing consent is required. Open the Telegram bot and send /start.",
+  "bot_command": "/start"
+}
+```
+
+The TypeScript client exposes `MiniAppApiError.isConsentRequired` / `isConsentRequiredError(err)`, which match only this exact shape. The frontend renders a consent screen with a link to `https://t.me/DotingLifeBot?start=consent` (override with `VITE_BOT_USERNAME`) and a re-check button.
+
 ## Auth
 
 `POST /v1/miniapp/auth`

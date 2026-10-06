@@ -55,7 +55,7 @@ Full description with lifecycle, data, deployment and failure diagrams: **[docs/
 - **Frontend:** React, TypeScript, Vite. Generated TypeScript client in `clients/typescript`.
 - **Storage:** PostgreSQL 17, Redis 7
 - **Runtime:** Docker Compose
-- **LLM:** GigaChat, OpenAI, DeepSeek (switch with `LLM_PROVIDER`), plus a fake provider for development and tests
+- **LLM:** GigaChat, OpenAI, DeepSeek, Sber500 OpenAI-compatible gateway (switch with `LLM_PROVIDER`)
 - **Load testing:** k6 (run via Docker)
 
 ## Repository structure
@@ -89,8 +89,8 @@ All settings are environment variables. [.env.example](.env.example) lists every
 | Category | Variables (examples) |
 |---|---|
 | Runtime | `APP_ENV`, `APP_HOST`, `APP_PORT` |
-| LLM selection | `LLM_PROVIDER` (`fake`/`openai`/`gigachat`/`deepseek`), `LLM_SELF_CHECK_MODE` |
-| Provider credentials and models | `GIGACHAT_*`, `OPENAI_*`, `DEEPSEEK_*` |
+| LLM selection | `LLM_PROVIDER` (`fake`/`openai`/`gigachat`/`deepseek`/`sber500`), `LLM_SELF_CHECK_MODE` |
+| Provider credentials and models | `GIGACHAT_*`, `OPENAI_*`, `DEEPSEEK_*`, `SBER500_*` |
 | Persistence | `RELATIONSHIP_BACKEND`, `DATABASE_URL`, `CHECKPOINT_BACKEND`, `REDIS_URL`, `REDIS_CHECKPOINT_TTL_SECONDS` |
 | Telegram | `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_INIT_DATA_MAX_AGE_SECONDS` |
 | Mini App | `MINIAPP_STATIC_DIR` |
@@ -139,6 +139,7 @@ See [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md).
 ## Privacy and security
 
 - Identity comes only from validated Telegram `initData`. Relationships and rules are scoped to their owner.
+- Personal-data consent is required: users give it in @DotingLifeBot via `/start`. Without it the bot runs no workflows and the Mini App API returns `403 {"error": "consent_required", "message": ..., "bot_command": "/start"}`; the Mini App shows a consent screen linking to the bot. Users can revoke consent, export data and delete their account in the bot. Requires `migrations/0003_consents.sql`.
 - Raw messages, prompts and model output are **not** stored in PostgreSQL or telemetry. Redis checkpoints temporarily hold active request state (TTL, default 20 min) for retry and resume.
 - Secrets live only in `.env`. Relationship rules are treated as untrusted data, and system policy takes precedence over them.
 

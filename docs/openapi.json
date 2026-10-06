@@ -75,6 +75,33 @@
         "title": "BootstrapResponse",
         "type": "object"
       },
+      "ConsentRequiredError": {
+        "additionalProperties": false,
+        "description": "403 body: the Telegram user has no current personal-data consent. Consent is given in the bot via /start.",
+        "properties": {
+          "bot_command": {
+            "const": "/start",
+            "default": "/start",
+            "title": "Bot Command",
+            "type": "string"
+          },
+          "error": {
+            "const": "consent_required",
+            "default": "consent_required",
+            "title": "Error",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ConsentRequiredError",
+        "type": "object"
+      },
       "DeliveryResponse": {
         "additionalProperties": false,
         "properties": {
@@ -698,6 +725,16 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -747,6 +784,16 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -795,6 +842,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
           },
           "422": {
             "content": {
@@ -854,6 +911,16 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -906,6 +973,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
           },
           "422": {
             "content": {
@@ -964,6 +1041,16 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1014,6 +1101,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
           },
           "422": {
             "content": {
@@ -1080,6 +1177,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
           },
           "422": {
             "content": {
@@ -1149,6 +1256,16 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1208,6 +1325,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
           },
           "422": {
             "content": {
@@ -1283,6 +1410,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentRequiredError"
+                }
+              }
+            },
+            "description": "Consent required"
           },
           "422": {
             "content": {

@@ -1,4 +1,4 @@
-import type { ValidationError } from "./types";
+import type { ConsentRequiredError, ValidationError } from "./types";
 
 /**
  * Raised for every non-2xx response from the Mini App API, and for a missing
@@ -40,6 +40,24 @@ export class MiniAppApiError extends Error {
   get isNotConfigured(): boolean {
     return this.status === 503;
   }
+
+  /** 403 with the ConsentRequiredError body: consent must be given in the Telegram bot via /start. */
+  get isConsentRequired(): boolean {
+    return this.status === 403 && isConsentRequiredBody(this.body);
+  }
+}
+
+export const CONSENT_REQUIRED_ERROR = "consent_required";
+
+/** Exact runtime shape of the Mini App 403 ConsentRequiredError body. */
+export function isConsentRequiredBody(body: unknown): body is ConsentRequiredError {
+  if (!body || typeof body !== "object") return false;
+  const value = body as Record<string, unknown>;
+  return value.error === CONSENT_REQUIRED_ERROR && typeof value.message === "string" && value.bot_command === "/start";
+}
+
+export function isConsentRequiredError(err: unknown): boolean {
+  return err instanceof MiniAppApiError && err.isConsentRequired;
 }
 
 export const MISSING_INIT_DATA_DETAIL = "Missing Telegram initData";
@@ -57,6 +75,9 @@ export function errorFromResponse(status: number, body: unknown): MiniAppApiErro
   const detail = body && typeof body === "object" ? (body as { detail?: unknown }).detail : undefined;
   if (typeof detail === "string") {
     return new MiniAppApiError(status, detail, { body });
+  }
+  if (isConsentRequiredBody(body)) {
+    return new MiniAppApiError(status, body.message, { body });
   }
   if (Array.isArray(detail)) {
     const validationErrors = detail.filter(isValidationErrorItem);

@@ -1,4 +1,5 @@
 import "@telegram-apps/telegram-ui/dist/styles.css";
+import "./select.css";
 
 import {
   AppRoot,
