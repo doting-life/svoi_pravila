@@ -45,6 +45,7 @@ class GenerationStage(BaseStage):
                 "ruleset_version": getattr(relationship, "ruleset_version", None),
             },
             self_check=True,
+            request_id=state.request_id,
         )
         if not result.success:
             raise RuntimeError(result.error or "LLM generation failed")

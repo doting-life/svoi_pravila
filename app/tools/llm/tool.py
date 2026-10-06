@@ -14,6 +14,13 @@ from app.tools.llm.errors import LLMProviderError
 SelfCheckMode = Literal["observe", "required"]
 
 
+def _owned(payload: Any, request_id: Any | None) -> Any:
+    """request_id is server-owned: never trust the LLM's value."""
+    if request_id is None or not isinstance(payload, dict):
+        return payload
+    return {**payload, "request_id": str(request_id)}
+
+
 class LLMGenerateTool(BaseTool):
     """Exactly one structured provider call per execute().
 
@@ -38,6 +45,7 @@ class LLMGenerateTool(BaseTool):
         output_artifact: str,
         metadata: dict[str, Any] | None = None,
         self_check: bool = False,
+        request_id: Any | None = None,
     ) -> ToolResult:
         try:
             result_model = ARTIFACT_MODELS[output_artifact]
@@ -60,12 +68,12 @@ class LLMGenerateTool(BaseTool):
                 "provider_latency_ms": int((time.monotonic() - started) * 1000),
             }
             if not self_check:
-                validated = result_model.model_validate(response.payload)
+                validated = result_model.model_validate(_owned(response.payload, request_id))
                 return ToolResult(success=True, data=validated, metadata=tool_metadata)
 
             payload = response.payload
             try:
-                validated = result_model.model_validate(payload.get("result"))
+                validated = result_model.model_validate(_owned(payload.get("result"), request_id))
             except ValidationError:
                 raise RuntimeError("generation contract failure: invalid result") from None
 
