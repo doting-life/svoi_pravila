@@ -53,7 +53,17 @@ class ValidationStage(BaseStage):
             checks.append(SemanticCheck(name="probable_not_certain", passed=bool(result.probable_intent.strip())))
         elif isinstance(result, HelpSayResult):
             checks.append(SemanticCheck(name="non_empty_message", passed=bool(result.message.strip())))
-            checks.append(SemanticCheck(name="intent_preserved", passed=bool(result.preserved_intent.strip())))
+            intent_ok = bool(result.preserved_intent.strip())
+            checks.append(
+                SemanticCheck(
+                    name="intent_preserved",
+                    passed=intent_ok,
+                    details=None
+                    if intent_ok
+                    else "Field 'preserved_intent' must be a concise non-empty description of the user's "
+                    "original intent that the message preserves.",
+                )
+            )
             # Frozen temporary regression guard, Russian variants only (see commitments.py).
             invented = (
                 find_invented_commitments(result.message, request.text) if _is_russian(request.language) else []
