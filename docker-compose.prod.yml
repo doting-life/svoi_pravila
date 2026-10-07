@@ -1,0 +1,98 @@
+# Production override. Use together with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml <command>
+#
+# - Only Caddy publishes ports (80/443). app, postgres and redis are reachable
+#   only on the internal Compose network.
+# - db-init is manual: it sits behind the "init" profile and app no longer
+#   depends on it. Run it explicitly, once:
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm db-init
+# - All secrets/values come from the server-side .env (never committed).
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: svoi_pravila
+      POSTGRES_USER: svoi_pravila
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports: !reset []
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 256m
+
+  redis:
+    ports: !reset []
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  # Manual one-shot. Never started by `up`; only by an explicit `run`.
+  db-init:
+    profiles: ["init"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://svoi_pravila:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/svoi_pravila
+    logging: *default-logging
+
+  app:
+    ports: !reset []
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      RELATIONSHIP_BACKEND: postgres
+      CHECKPOINT_BACKEND: redis
+      DATABASE_URL: postgresql+asyncpg://svoi_pravila:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/svoi_pravila
+      REDIS_URL: redis://redis:6379/0
+      MINIAPP_STATIC_DIR: /app/frontend/dist
+      # Caddy (the only client of app) terminates TLS; trust its X-Forwarded-*
+      # headers so redirects such as /miniapp -> /miniapp/ keep https.
+      # Safe because app is not published on any host port.
+      FORWARDED_ALLOW_IPS: "*"
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 256m
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+volumes:
+  caddy_data:
+  caddy_config:
